@@ -21,6 +21,13 @@ config WIREGUARD
 
 if WIREGUARD
 
+config WIREGUARD_SHELL
+	bool
+	depends on NET_SHELL
+	select GETOPT_LONG
+	select POSIX_C_LIB_EXT
+	default y
+
 config WIREGUARD_BUF_COUNT
 	int "Internal temp network buffer count"
 	default 2
