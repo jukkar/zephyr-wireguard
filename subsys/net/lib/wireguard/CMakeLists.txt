@@ -10,6 +10,15 @@ zephyr_library_include_directories(../../../../include)
 
 zephyr_library_sources(wg.c)
 
+zephyr_library_sources(
+  crypto/crypto.c
+  crypto/refc/chacha20.c
+  crypto/refc/poly1305-donna.c
+  crypto/refc/blake2s.c
+  crypto/refc/chacha20poly1305.c
+  crypto/refc/x25519.c
+)
+
 zephyr_library_link_libraries(wireguard)
 target_link_libraries(wireguard INTERFACE zephyr_interface)
 
