@@ -22,6 +22,8 @@ zephyr_library_sources(
   crypto/refc/x25519.c
 )
 
+zephyr_library_sources_ifdef(CONFIG_BOARD_NATIVE_SIM ns_rtc.c)
+
 zephyr_library_link_libraries(wireguard)
 target_link_libraries(wireguard INTERFACE zephyr_interface)
 
