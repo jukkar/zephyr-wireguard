@@ -1,0 +1,4 @@
+name: wireguard
+build:
+  cmake: subsys/net/lib/wireguard/
+  kconfig: subsys/net/lib/wireguard/Kconfig

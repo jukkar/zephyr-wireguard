@@ -1,0 +1,6 @@
+manifest:
+  projects:
+    - name: wireguard
+      path: modules/lib/zephyr-wireguard   # adjust the path as needed
+      url: https://github.com/jukkar/zephyr-wireguard.git
+      revision: main
