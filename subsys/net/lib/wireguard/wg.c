@@ -1287,17 +1287,18 @@ static enum net_verdict interface_recv(struct net_if *iface,
 	}
 
 	net_pkt_set_l2_processed(pkt, true);
+	net_pkt_set_loopback(pkt, false);
 
 	/* IP version and header length. */
 	vtc_vhl = NET_IPV6_HDR(pkt)->vtc & 0xf0;
 
 	if (IS_ENABLED(CONFIG_NET_IPV6) && vtc_vhl == 0x60) {
 		net_pkt_set_family(pkt, AF_INET6);
-		return net_ipv6_input(pkt, false);
+		return net_ipv6_input(pkt);
 
 	} else if (IS_ENABLED(CONFIG_NET_IPV4) && vtc_vhl == 0x40) {
 		net_pkt_set_family(pkt, AF_INET);
-		return net_ipv4_input(pkt, false);
+		return net_ipv4_input(pkt);
 	}
 
 	NET_DBG("Unknown IP family packet (0x%x)", vtc_vhl);
