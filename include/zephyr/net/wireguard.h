@@ -71,7 +71,7 @@ struct wireguard_peer_config {
 	uint8_t timestamp[WIREGUARD_TIMESTAMP_LEN];
 
 	/** End-point address (when connecting) */
-	struct sockaddr_storage endpoint_ip;
+	struct net_sockaddr_storage endpoint_ip;
 
 	/** Allowed IP address */
 	struct wireguard_allowed_ip allowed_ip[WIREGUARD_MAX_SRC_IPS];

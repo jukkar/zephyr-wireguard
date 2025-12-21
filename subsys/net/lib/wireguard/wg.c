@@ -124,8 +124,8 @@ struct wg_iface_context {
 #include "wg_stats.h"
 
 static int create_packet(struct net_if *iface,
-			 struct sockaddr *src,
-			 struct sockaddr *dst,
+			 struct net_sockaddr *src,
+			 struct net_sockaddr *dst,
 			 uint8_t *packet,
 			 size_t packet_len,
 			 uint8_t dscp,
@@ -163,29 +163,29 @@ static enum net_verdict wg_input(struct net_conn *conn,
 }
 
 static int select_target_iface(struct wg_peer *peer,
-			       struct sockaddr *addr,
-			       struct sockaddr_storage *dst,
+			       struct net_sockaddr *addr,
+			       struct net_sockaddr_storage *dst,
 			       struct net_if **iface)
 {
-	if (IS_ENABLED(CONFIG_NET_IPV6) && dst->ss_family == AF_INET6) {
-		const struct in6_addr *src;
+	if (IS_ENABLED(CONFIG_NET_IPV6) && dst->ss_family == NET_AF_INET6) {
+		const struct net_in6_addr *src;
 
 		*iface = net_if_ipv6_select_src_iface_addr(
 			&net_sin6(net_sad(dst))->sin6_addr, &src);
 
 		net_ipv6_addr_copy_raw((uint8_t *)(&net_sin6(addr)->sin6_addr),
 				       (const uint8_t *)src);
-		addr->sa_family = AF_INET6;
+		addr->sa_family = NET_AF_INET6;
 
-	} else if (IS_ENABLED(CONFIG_NET_IPV4) && dst->ss_family == AF_INET) {
-		const struct in_addr *src;
+	} else if (IS_ENABLED(CONFIG_NET_IPV4) && dst->ss_family == NET_AF_INET) {
+		const struct net_in_addr *src;
 
 		*iface = net_if_ipv4_select_src_iface_addr(
 			&net_sin(net_sad(dst))->sin_addr, &src);
 
 		net_ipv4_addr_copy_raw((uint8_t *)&net_sin(addr)->sin_addr,
 				       (const uint8_t *)src);
-		addr->sa_family = AF_INET;
+		addr->sa_family = NET_AF_INET;
 
 	} else {
 		return -EAFNOSUPPORT;
@@ -319,8 +319,8 @@ static int start_handshake(struct wg_iface_context *ctx,
 static int wg_send_keepalive(struct wg_iface_context *ctx,
 			     struct wg_peer *peer)
 {
-	struct sockaddr_storage my_addr = { 0 };
-	struct sockaddr *addr = (struct sockaddr *)&my_addr;
+	struct net_sockaddr_storage my_addr = { 0 };
+	struct net_sockaddr *addr = (struct net_sockaddr *)&my_addr;
 	struct net_if *target_iface;
 	struct net_pkt *pkt;
 	int ret;
@@ -435,7 +435,7 @@ static void wg_periodic_timer(struct k_work *work)
 	}
 }
 
-static uint16_t get_port(struct sockaddr *addr)
+static uint16_t get_port(struct net_sockaddr *addr)
 {
 	uint16_t local_port;
 	int max_count = 10;
@@ -448,7 +448,7 @@ static uint16_t get_port(struct sockaddr *addr)
 			local_port = 0;
 			break;
 		}
-	} while (net_context_port_in_use(IPPROTO_UDP, local_port, addr));
+	} while (net_context_port_in_use(NET_IPPROTO_UDP, local_port, addr));
 
 	return local_port;
 }
@@ -470,7 +470,7 @@ static void crypto_init(struct wg_context *ctx)
 
 static int wireguard_init(void)
 {
-	struct sockaddr local_addr = { 0 };
+	struct net_sockaddr local_addr = { 0 };
 	const struct device *dev;
 	struct wg_context *ctx;
 	uint16_t port;
@@ -503,14 +503,14 @@ static int wireguard_init(void)
 	crypto_init(ctx);
 
 	if (IS_ENABLED(CONFIG_NET_IPV6)) {
-		local_addr.sa_family = AF_INET6;
+		local_addr.sa_family = NET_AF_INET6;
 
 		/* Note that if IPv4 is enabled, then v4-to-v6-mapping option
 		 * is set and the system will use the IPv6 socket to provide
 		 * IPv4 connectivity.
 		 */
 	} else if (IS_ENABLED(CONFIG_NET_IPV4)) {
-		local_addr.sa_family = AF_INET;
+		local_addr.sa_family = NET_AF_INET;
 	}
 
 	if (CONFIG_WIREGUARD_PORT > 0) {
@@ -573,8 +573,8 @@ static void wg_ctrl_iface_init(struct net_if *iface)
 }
 
 static int handle_handshake_init(struct wg_peer *peer,
-				 struct sockaddr *peer_addr,
-				 struct sockaddr *my_addr,
+				 struct net_sockaddr *peer_addr,
+				 struct net_sockaddr *my_addr,
 				 struct net_pkt *pkt)
 {
 	NET_PKT_DATA_ACCESS_DEFINE(access, struct msg_handshake_init);
@@ -618,8 +618,8 @@ static int handle_handshake_init(struct wg_peer *peer,
 }
 
 static int handle_handshake_response(struct wg_peer *peer,
-				     struct sockaddr *peer_addr,
-				     struct sockaddr *my_addr,
+				     struct net_sockaddr *peer_addr,
+				     struct net_sockaddr *my_addr,
 				     struct net_pkt *pkt)
 {
 	NET_PKT_DATA_ACCESS_DEFINE(access, struct msg_handshake_response);
@@ -647,13 +647,13 @@ static int handle_handshake_response(struct wg_peer *peer,
 	return 0;
 }
 
-static void update_peer_addr(struct wg_peer *peer, struct sockaddr *peer_addr)
+static void update_peer_addr(struct wg_peer *peer, struct net_sockaddr *peer_addr)
 {
 	memcpy(&peer->endpoint, peer_addr, sizeof(peer->endpoint));
 }
 
 static int handle_cookie_reply(struct wg_peer *peer,
-			       struct sockaddr *peer_addr,
+			       struct net_sockaddr *peer_addr,
 			       struct net_pkt *pkt)
 {
 	NET_PKT_DATA_ACCESS_DEFINE(access, struct msg_cookie_reply);
@@ -680,7 +680,7 @@ static int handle_cookie_reply(struct wg_peer *peer,
 }
 
 static int handle_transport_data(struct wg_peer *peer,
-				 struct sockaddr *peer_addr,
+				 struct net_sockaddr *peer_addr,
 				 struct net_pkt *pkt,
 				 size_t ip_udp_hdr_len,
 				 size_t data_len)
@@ -748,10 +748,10 @@ static enum net_verdict wg_ctrl_recv(struct net_if *iface, struct net_pkt *pkt)
 {
 	NET_PKT_DATA_ACCESS_DEFINE(wg_access, struct wg_msg_hdr);
 	enum net_verdict verdict = NET_DROP;
-	struct sockaddr_storage my_addr_s = { 0 };
-	struct sockaddr *my_addr = (struct sockaddr *)&my_addr_s;
-	struct sockaddr_storage addr_s = { 0 };
-	struct sockaddr *addr = (struct sockaddr *)&addr_s;
+	struct net_sockaddr_storage my_addr_s = { 0 };
+	struct net_sockaddr *my_addr = (struct net_sockaddr *)&my_addr_s;
+	struct net_sockaddr_storage addr_s = { 0 };
+	struct net_sockaddr *addr = (struct net_sockaddr *)&addr_s;
 	union net_proto_header *udp_hdr;
 	union net_ip_header *ip_hdr;
 	struct wg_msg_hdr *hdr;
@@ -768,7 +768,7 @@ static enum net_verdict wg_ctrl_recv(struct net_if *iface, struct net_pkt *pkt)
 	ip_hdr = net_pkt_vpn_ip_hdr(pkt);
 	udp_hdr = net_pkt_vpn_udp_hdr(pkt);
 
-	if (net_pkt_family(pkt) == AF_INET) {
+	if (net_pkt_family(pkt) == NET_AF_INET) {
 		if (len < NET_IPV4UDPH_LEN + sizeof(struct wg_msg_hdr)) {
 			NET_DBG("DROP: Too short Wireguard header");
 			goto drop;
@@ -784,16 +784,16 @@ static enum net_verdict wg_ctrl_recv(struct net_if *iface, struct net_pkt *pkt)
 		}
 
 		memcpy(&net_sin(addr)->sin_addr, &ip_hdr->ipv4->src,
-		       sizeof(struct in_addr));
+		       sizeof(struct net_in_addr));
 		net_sin(addr)->sin_port = udp_hdr->udp->src_port;
-		addr->sa_family = AF_INET;
+		addr->sa_family = NET_AF_INET;
 
 		memcpy(&net_sin(my_addr)->sin_addr, &ip_hdr->ipv4->dst,
-		       sizeof(struct in_addr));
+		       sizeof(struct net_in_addr));
 		net_sin(my_addr)->sin_port = udp_hdr->udp->dst_port;
-		net_sin(my_addr)->sin_family = AF_INET;
+		net_sin(my_addr)->sin_family = NET_AF_INET;
 
-	} else if (net_pkt_family(pkt) == AF_INET6) {
+	} else if (net_pkt_family(pkt) == NET_AF_INET6) {
 		if (len < NET_IPV6UDPH_LEN + sizeof(struct wg_msg_hdr)) {
 			NET_DBG("DROP: Too short Wireguard header");
 			goto drop;
@@ -809,14 +809,14 @@ static enum net_verdict wg_ctrl_recv(struct net_if *iface, struct net_pkt *pkt)
 		}
 
 		memcpy(&net_sin6(addr)->sin6_addr, &ip_hdr->ipv6->src,
-		       sizeof(struct in6_addr));
+		       sizeof(struct net_in6_addr));
 		net_sin6(addr)->sin6_port = udp_hdr->udp->src_port;
-		addr->sa_family = AF_INET6;
+		addr->sa_family = NET_AF_INET6;
 
 		memcpy(&net_sin6(my_addr)->sin6_addr, &ip_hdr->ipv6->dst,
-		       sizeof(struct in6_addr));
+		       sizeof(struct net_in6_addr));
 		net_sin6(my_addr)->sin6_port = udp_hdr->udp->dst_port;
-		net_sin6(my_addr)->sin6_family = AF_INET6;
+		net_sin6(my_addr)->sin6_family = NET_AF_INET6;
 	} else {
 		return -EAFNOSUPPORT;
 	}
@@ -1050,7 +1050,7 @@ static int interface_send(struct net_if *iface, struct net_pkt *pkt)
 {
 	struct wg_iface_context *ctx = net_if_get_device(iface)->data;
 	struct msg_transport_data hdr = { 0 };
-	struct sockaddr_storage src_addr;
+	struct net_sockaddr_storage src_addr;
 	struct net_pkt *pkt_encrypted;
 	struct net_if *target_iface;
 	struct net_buf *buf;
@@ -1064,8 +1064,8 @@ static int interface_send(struct net_if *iface, struct net_pkt *pkt)
 		return -ENOENT;
 	}
 
-	if (net_pkt_family(pkt) != AF_INET &&
-	    net_pkt_family(pkt) != AF_INET6) {
+	if (net_pkt_family(pkt) != NET_AF_INET &&
+	    net_pkt_family(pkt) != NET_AF_INET6) {
 		return -EINVAL;
 	}
 
@@ -1160,8 +1160,8 @@ static int interface_send(struct net_if *iface, struct net_pkt *pkt)
 		/* If the interface is not set, then we figure out the
 		 * interface based on the packet destination address.
 		 */
-		if (IS_ENABLED(CONFIG_NET_IPV6) && peer->endpoint.ss_family == AF_INET6) {
-			const struct in6_addr *src;
+		if (IS_ENABLED(CONFIG_NET_IPV6) && peer->endpoint.ss_family == NET_AF_INET6) {
+			const struct net_in6_addr *src;
 
 			target_iface = net_if_ipv6_select_src_iface_addr(
 				&net_sin6(net_sad(&peer->endpoint))->sin6_addr, &src);
@@ -1169,10 +1169,10 @@ static int interface_send(struct net_if *iface, struct net_pkt *pkt)
 			net_ipv6_addr_copy_raw(
 				(uint8_t *)(&net_sin6(net_sad(&src_addr))->sin6_addr),
 				(const uint8_t *)src);
-			src_addr.ss_family = AF_INET6;
+			src_addr.ss_family = NET_AF_INET6;
 
-		} else if (IS_ENABLED(CONFIG_NET_IPV4) && peer->endpoint.ss_family == AF_INET) {
-			const struct in_addr *src;
+		} else if (IS_ENABLED(CONFIG_NET_IPV4) && peer->endpoint.ss_family == NET_AF_INET) {
+			const struct net_in_addr *src;
 
 			target_iface = net_if_ipv4_select_src_iface_addr(
 				&net_sin(net_sad(&peer->endpoint))->sin_addr, &src);
@@ -1180,7 +1180,7 @@ static int interface_send(struct net_if *iface, struct net_pkt *pkt)
 			net_ipv4_addr_copy_raw(
 				(uint8_t *)(&net_sin(net_sad(&src_addr))->sin_addr),
 				(const uint8_t *)src);
-			src_addr.ss_family = AF_INET;
+			src_addr.ss_family = NET_AF_INET;
 
 		} else {
 			NET_DBG("Unknown address family %d", peer->endpoint.ss_family);
@@ -1192,8 +1192,8 @@ static int interface_send(struct net_if *iface, struct net_pkt *pkt)
 	} else {
 		iface = net_if_get_by_index(ctx->wg_ctx->ifindex);
 
-		if (IS_ENABLED(CONFIG_NET_IPV6) && peer->endpoint.ss_family == AF_INET6) {
-			const struct in6_addr *src;
+		if (IS_ENABLED(CONFIG_NET_IPV6) && peer->endpoint.ss_family == NET_AF_INET6) {
+			const struct net_in6_addr *src;
 
 			src = net_if_ipv6_select_src_addr(iface,
 					&net_sin6(net_sad(&peer->endpoint))->sin6_addr);
@@ -1201,10 +1201,10 @@ static int interface_send(struct net_if *iface, struct net_pkt *pkt)
 			net_ipv6_addr_copy_raw(
 				(uint8_t *)(&net_sin6(net_sad(&src_addr))->sin6_addr),
 				(const uint8_t *)src);
-			src_addr.ss_family = AF_INET6;
+			src_addr.ss_family = NET_AF_INET6;
 
-		} else if (IS_ENABLED(CONFIG_NET_IPV4) && peer->endpoint.ss_family == AF_INET) {
-			const struct in_addr *src;
+		} else if (IS_ENABLED(CONFIG_NET_IPV4) && peer->endpoint.ss_family == NET_AF_INET) {
+			const struct net_in_addr *src;
 
 			src = net_if_ipv4_select_src_addr(iface,
 					&net_sin(net_sad(&peer->endpoint))->sin_addr);
@@ -1212,7 +1212,7 @@ static int interface_send(struct net_if *iface, struct net_pkt *pkt)
 			net_ipv4_addr_copy_raw(
 				(uint8_t *)(&net_sin(net_sad(&src_addr))->sin_addr),
 				(const uint8_t *)src);
-			src_addr.ss_family = AF_INET;
+			src_addr.ss_family = NET_AF_INET;
 		}
 	}
 
@@ -1287,11 +1287,11 @@ static enum net_verdict interface_recv(struct net_if *iface,
 	vtc_vhl = NET_IPV6_HDR(pkt)->vtc & 0xf0;
 
 	if (IS_ENABLED(CONFIG_NET_IPV6) && vtc_vhl == 0x60) {
-		net_pkt_set_family(pkt, AF_INET6);
+		net_pkt_set_family(pkt, NET_AF_INET6);
 		return net_ipv6_input(pkt);
 
 	} else if (IS_ENABLED(CONFIG_NET_IPV4) && vtc_vhl == 0x40) {
-		net_pkt_set_family(pkt, AF_INET);
+		net_pkt_set_family(pkt, NET_AF_INET);
 		return net_ipv4_input(pkt);
 	}
 
@@ -1425,8 +1425,8 @@ static const struct virtual_interface_api wg_iface_api = {
 LISTIFY(CONFIG_WIREGUARD_MAX_PEER, WG_INTERFACE_INIT, (;), _);
 
 static int create_ipv4_packet(struct net_if *iface,
-			      struct sockaddr *src,
-			      struct sockaddr *dst,
+			      struct net_sockaddr *src,
+			      struct net_sockaddr *dst,
 			      uint8_t *packet,
 			      size_t packet_len,
 			      uint8_t dscp,
@@ -1438,7 +1438,7 @@ static int create_ipv4_packet(struct net_if *iface,
 
 	pkt = net_pkt_alloc_with_buffer(iface,
 					NET_UDPH_LEN + packet_len,
-					AF_INET, IPPROTO_UDP,
+					NET_AF_INET, NET_IPPROTO_UDP,
 					PKT_ALLOC_WAIT_TIME);
 	if (pkt == NULL) {
 		return -ENOMEM;
@@ -1463,8 +1463,8 @@ drop:
 }
 
 static int create_ipv6_packet(struct net_if *iface,
-			      struct sockaddr *src,
-			      struct sockaddr *dst,
+			      struct net_sockaddr *src,
+			      struct net_sockaddr *dst,
 			      uint8_t *packet,
 			      size_t packet_len,
 			      struct net_pkt **reply_pkt)
@@ -1474,7 +1474,7 @@ static int create_ipv6_packet(struct net_if *iface,
 
 	pkt = net_pkt_alloc_with_buffer(iface,
 					NET_UDPH_LEN + packet_len,
-					AF_INET6, IPPROTO_UDP,
+					NET_AF_INET6, NET_IPPROTO_UDP,
 					PKT_ALLOC_WAIT_TIME);
 	if (pkt == NULL) {
 		return -ENOMEM;
@@ -1495,8 +1495,8 @@ drop:
 }
 
 static int create_packet(struct net_if *iface,
-			 struct sockaddr *src,
-			 struct sockaddr *dst,
+			 struct net_sockaddr *src,
+			 struct net_sockaddr *dst,
 			 uint8_t *packet,
 			 size_t packet_len,
 			 uint8_t dscp,
@@ -1505,7 +1505,7 @@ static int create_packet(struct net_if *iface,
 {
 	int ret;
 
-	if (IS_ENABLED(CONFIG_NET_IPV4) && dst->sa_family == AF_INET) {
+	if (IS_ENABLED(CONFIG_NET_IPV4) && dst->sa_family == NET_AF_INET) {
 		ret = create_ipv4_packet(iface,
 					 src,
 					 dst,
@@ -1515,7 +1515,7 @@ static int create_packet(struct net_if *iface,
 					 ecn,
 					 pkt);
 
-	} else if (IS_ENABLED(CONFIG_NET_IPV6) && dst->sa_family == AF_INET6) {
+	} else if (IS_ENABLED(CONFIG_NET_IPV6) && dst->sa_family == NET_AF_INET6) {
 		ret = create_ipv6_packet(iface,
 					 src,
 					 dst,
@@ -1547,10 +1547,10 @@ static int create_packet(struct net_if *iface,
 
 	net_pkt_set_iface(*pkt, iface);
 
-	if (IS_ENABLED(CONFIG_NET_IPV4) && dst->sa_family == AF_INET) {
-		net_ipv4_finalize(*pkt, IPPROTO_UDP);
-	} else if (IS_ENABLED(CONFIG_NET_IPV6) && dst->sa_family == AF_INET6) {
-		net_ipv6_finalize(*pkt, IPPROTO_UDP);
+	if (IS_ENABLED(CONFIG_NET_IPV4) && dst->sa_family == NET_AF_INET) {
+		net_ipv4_finalize(*pkt, NET_IPPROTO_UDP);
+	} else if (IS_ENABLED(CONFIG_NET_IPV6) && dst->sa_family == NET_AF_INET6) {
+		net_ipv6_finalize(*pkt, NET_IPPROTO_UDP);
 	}
 
 	ret = 0;
@@ -1576,8 +1576,8 @@ static int wg_send_handshake_init(struct wg_iface_context *ctx,
 				  struct wg_peer *peer,
 				  struct msg_handshake_init *packet)
 {
-	struct sockaddr_storage my_addr = { 0 };
-	struct sockaddr *addr = (struct sockaddr *)&my_addr;
+	struct net_sockaddr_storage my_addr = { 0 };
+	struct net_sockaddr *addr = (struct net_sockaddr *)&my_addr;
 	struct net_pkt *pkt = NULL;
 	struct net_if *target_iface;
 	int ret;
@@ -1641,7 +1641,7 @@ drop:
 static void wg_send_handshake_response(struct wg_iface_context *ctx,
 				       struct net_if *iface,
 				       struct wg_peer *peer,
-				       struct sockaddr *my_addr)
+				       struct net_sockaddr *my_addr)
 {
 	struct msg_handshake_response packet = { 0 };
 	struct net_pkt *pkt = NULL;
@@ -1687,7 +1687,7 @@ drop:
 static void wg_send_handshake_cookie(struct wg_iface_context *ctx,
 				     const uint8_t *mac1,
 				     uint32_t index,
-				     struct sockaddr *addr)
+				     struct net_sockaddr *addr)
 {
 	struct msg_cookie_reply packet;
 	struct net_pkt *pkt;
@@ -1696,9 +1696,9 @@ static void wg_send_handshake_cookie(struct wg_iface_context *ctx,
 	/* Use the port and address to calculate the cookie */
 	wg_create_cookie_reply(ctx, &packet, mac1, index,
 			       (uint8_t *)&net_sin(addr)->sin_port,
-			       addr->sa_family == AF_INET ?
-			       (2U + sizeof(struct in_addr)) :
-			       (2U + sizeof(struct in6_addr)));
+			       addr->sa_family == NET_AF_INET ?
+			       (2U + sizeof(struct net_in_addr)) :
+			       (2U + sizeof(struct net_in6_addr)));
 
 	ret = create_packet(ctx->wg_ctx->iface, addr, net_sad(&ctx->peer->endpoint),
 			    (uint8_t *)&packet, sizeof(packet), NET_IPV4_DSCP_AF41, 0,
