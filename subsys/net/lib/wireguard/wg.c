@@ -203,7 +203,7 @@ static int select_target_iface(struct wg_peer *peer,
 }
 
 static void wg_iface_event_handler(struct net_mgmt_event_callback *cb,
-				   uint32_t mgmt_event, struct net_if *iface)
+				   uint64_t mgmt_event, struct net_if *iface)
 {
 	struct wg_context *context =
 		CONTAINER_OF(cb, struct wg_context, wg_mgmt_cb);
@@ -2152,8 +2152,8 @@ void wireguard_peer_foreach(wg_peer_cb_t cb, void *user_data)
 
 #if defined(CONFIG_NET_STATISTICS_VPN) && defined(CONFIG_NET_STATISTICS_USER_API)
 
-static int wg_stats_get(uint32_t mgmt_request, struct net_if *iface,
-			 void *data, size_t len)
+static int wg_stats_get(uint64_t mgmt_request, struct net_if *iface,
+			void *data, size_t len)
 {
 	size_t len_chk = 0;
 	struct net_stats_vpn *src = NULL;
