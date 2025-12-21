@@ -139,7 +139,6 @@ static enum net_verdict wg_input(struct net_conn *conn,
 				 void *user_data)
 {
 	struct wg_context *ctx = user_data;
-	int ret;
 
 	ARG_UNUSED(conn);
 
@@ -160,12 +159,7 @@ static enum net_verdict wg_input(struct net_conn *conn,
 	 * will decrypt it and then pass it to the virtual interface
 	 * that is handling that connection if such connection is found.
 	 */
-	ret = net_recv_data(ctx->iface, pkt);
-	if (ret < 0) {
-		return NET_DROP;
-	}
-
-	return NET_OK;
+	return net_if_recv_data(ctx->iface, pkt);
 }
 
 static int select_target_iface(struct wg_peer *peer,
