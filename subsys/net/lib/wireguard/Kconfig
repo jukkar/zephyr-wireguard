@@ -22,6 +22,46 @@ config WIREGUARD
 
 if WIREGUARD
 
+# PSA Crypto API support for Wireguard
+# Copyright (c) 2025 Nordic Semiconductor ASA
+# SPDX-License-Identifier: Apache-2.0
+
+config WIREGUARD_USE_PSA
+	bool "Use PSA Crypto API for WireGuard cryptographic operations"
+	imply PSA_WANT_ALG_CHACHA20_POLY1305
+	imply PSA_WANT_ALG_ECDH
+	imply PSA_WANT_ECC_MONTGOMERY_255
+	imply PSA_WANT_ALG_HMAC
+	imply PSA_WANT_ALG_SHA_256
+	imply PSA_WANT_KEY_TYPE_CHACHA20
+	imply PSA_WANT_KEY_TYPE_ECC_KEY_PAIR_IMPORT
+	imply PSA_WANT_KEY_TYPE_ECC_KEY_PAIR_EXPORT
+	imply PSA_WANT_KEY_TYPE_ECC_KEY_PAIR_DERIVE
+	select MBEDTLS if NET_NATIVE
+	select MBEDTLS_PSA_CRYPTO_C
+	select MBEDTLS_CIPHER_C
+	select MBEDTLS_CHACHA20_C
+	select MBEDTLS_POLY1305_C
+	select MBEDTLS_CHACHAPOLY_C
+	select MBEDTLS_ECP_C
+	select MBEDTLS_ECP_DP_CURVE25519_ENABLED
+	select MBEDTLS_ECDH_C
+	select MBEDTLS_MD_C
+	select MBEDTLS_SHA256_C
+	select MBEDTLS_MAC_C
+	default y
+	help
+	  Use PSA Crypto API for cryptographic operations where available.
+	  This enables hardware acceleration on platforms that support it.
+
+	  Note:  BLAKE2s and XChaCha20-Poly1305 are not available in PSA
+	  and will continue to use the reference implementation.
+
+	  The following operations will use PSA when enabled:
+	  - X25519 key exchange
+	  - ChaCha20-Poly1305 AEAD encryption/decryption
+	  - Random number generation
+
 config WIREGUARD_SHELL
 	bool
 	depends on NET_SHELL
