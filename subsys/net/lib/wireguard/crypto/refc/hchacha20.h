@@ -30,34 +30,23 @@
  * Author: Daniel Hope <daniel.hope@smartalock.com>
  */
 
+/*  RFC7539 implementation of ChaCha20 with modified nonce size for WireGuard */
+/*  https://tools.ietf.org/html/rfc7539 */
+/*  Adapted from
+ * https://cr.yp.to/streamciphers/timings/estreambench/submissions/salsa20/chacha8/ref/chacha.c by
+ * D. J. Bernstein (Public Domain)
+ */
+/*  HChaCha20 is described here: https://tools.ietf.org/id/draft-arciszewski-xchacha-02.html */
+
 /* SPDX-License-Identifier: BSD-3-Clause */
 
-#ifndef _CHACHA20POLY1305_H_
-#define _CHACHA20POLY1305_H_
+#ifndef _HCHACHA20_H_
+#define _HCHACHA20_H_
 
-#include <stdbool.h>
-#include <stdlib.h>
 #include <stdint.h>
 
-/*  Aead(key, counter, plain text, auth text) ChaCha20Poly1305 AEAD, as specified in RFC7539 [17],
- * with its nonce being composed of 32 bits of zeros followed by the 64-bit little-endian value of
- * counter.
- */
-/*  AEAD_CHACHA20_POLY1305 as described in https://tools.ietf.org/html/rfc7539 */
-void chacha20poly1305_encrypt(uint8_t *dst, const uint8_t *src, size_t src_len, const uint8_t *ad,
-			      size_t ad_len, uint64_t nonce, const uint8_t *key);
-bool chacha20poly1305_decrypt(uint8_t *dst, const uint8_t *src, size_t src_len, const uint8_t *ad,
-			      size_t ad_len, uint64_t nonce, const uint8_t *key);
+#define CHACHA20_KEY_SIZE   (32)
 
-/*  Xaead(key, nonce, plain text, auth text) XChaCha20Poly1305 AEAD, with a 24-byte random nonce,
- * instantiated using HChaCha20 [6] and ChaCha20Poly1305.
- */
-/*  AEAD_XChaCha20_Poly1305 as described in
- * https://tools.ietf.org/id/draft-arciszewski-xchacha-02.html
- */
-void xchacha20poly1305_encrypt(uint8_t *dst, const uint8_t *src, size_t src_len, const uint8_t *ad,
-			       size_t ad_len, const uint8_t *nonce, const uint8_t *key);
-bool xchacha20poly1305_decrypt(uint8_t *dst, const uint8_t *src, size_t src_len, const uint8_t *ad,
-			       size_t ad_len, const uint8_t *nonce, const uint8_t *key);
+void hchacha20(uint8_t *out, const uint8_t *nonce, const uint8_t *key);
 
-#endif /* _CHACHA20POLY1305_H_ */
+#endif /* _HCHACHA20_H_ */

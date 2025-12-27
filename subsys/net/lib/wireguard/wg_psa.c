@@ -12,7 +12,7 @@
 #include "wg_psa.h"
 
 #include "crypto/crypto.h"
-#include "crypto/refc/chacha20.h"
+#include "crypto/refc/hchacha20.h"
 
 LOG_MODULE_DECLARE(wireguard, CONFIG_WIREGUARD_LOG_LEVEL);
 

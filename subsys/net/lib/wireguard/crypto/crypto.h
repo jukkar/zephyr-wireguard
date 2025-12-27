@@ -24,8 +24,6 @@
 #define wireguard_blake2s(out, outlen, key, keylen, in, inlen)                                     \
 	blake2s(out, outlen, key, keylen, in, inlen)
 
-#ifdef CONFIG_WIREGUARD_USE_PSA
-
 #include "../wg_psa.h"
 
 /* X25519 IMPLEMENTATION using PSA */
@@ -51,25 +49,6 @@
 	wg_psa_xaead_encrypt(dst, src, srclen, ad, adlen, nonce, key)
 #define wireguard_xaead_decrypt(dst, src, srclen, ad, adlen, nonce, key) \
 	wg_psa_xaead_decrypt(dst, src, srclen, ad, adlen, nonce, key)
-
-#else /* ! CONFIG_WIREGUARD_USE_PSA */
-
-/* X25519 IMPLEMENTATION using reference code */
-#include "refc/x25519.h"
-#define wireguard_x25519(a, b, c) x25519(a, b, c, 1)
-
-/* CHACHA20POLY1305 IMPLEMENTATION using reference code */
-#include "refc/chacha20poly1305.h"
-#define wireguard_aead_encrypt(dst, src, srclen, ad, adlen, nonce, key)                            \
-	chacha20poly1305_encrypt(dst, src, srclen, ad, adlen, nonce, key)
-#define wireguard_aead_decrypt(dst, src, srclen, ad, adlen, nonce, key)                            \
-	chacha20poly1305_decrypt(dst, src, srclen, ad, adlen, nonce, key)
-#define wireguard_xaead_encrypt(dst, src, srclen, ad, adlen, nonce, key)                           \
-	xchacha20poly1305_encrypt(dst, src, srclen, ad, adlen, nonce, key)
-#define wireguard_xaead_decrypt(dst, src, srclen, ad, adlen, nonce, key)                           \
-	xchacha20poly1305_decrypt(dst, src, srclen, ad, adlen, nonce, key)
-
-#endif /* CONFIG_WIREGUARD_USE_PSA */
 
 /* Endian / unaligned helper macros */
 #define U8C(v)  (v##U)
