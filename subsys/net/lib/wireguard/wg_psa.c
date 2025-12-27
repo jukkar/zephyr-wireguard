@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2025 Nordic Semiconductor ASA
  *
- * SPDX-License-Identifier:  Apache-2.0
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 #include <zephyr/kernel.h>
@@ -10,6 +10,9 @@
 
 #include <psa/crypto.h>
 #include "wg_psa.h"
+
+#include "crypto/crypto.h"
+#include "crypto/refc/chacha20.h"
 
 LOG_MODULE_DECLARE(wireguard, CONFIG_WIREGUARD_LOG_LEVEL);
 
@@ -222,6 +225,64 @@ bool wg_psa_aead_decrypt(uint8_t *dst,
 	}
 
 	return true;
+}
+
+/*
+ * XChaCha20-Poly1305 using hybrid approach:
+ * - HChaCha20: reference implementation (not available in PSA)
+ * - ChaCha20-Poly1305: PSA implementation
+ */
+int wg_psa_xaead_encrypt(uint8_t *dst,
+			 const uint8_t *src, size_t src_len,
+			 const uint8_t *ad, size_t ad_len,
+			 const uint8_t *nonce,
+			 const uint8_t *key)
+ {
+	uint8_t subkey[CHACHA20_KEY_SIZE];
+	uint64_t new_nonce;
+
+	if (!psa_initialized) {
+		if (wg_psa_init() != 0) {
+			return -EIO;
+		}
+	}
+
+	/* Use HChaCha20 to derive subkey from first 16 bytes of nonce */
+	hchacha20(subkey, nonce, key);
+
+	/* Extract last 8 bytes of 24-byte nonce as little-endian uint64 */
+	new_nonce = U8TO64_LITTLE(nonce + 16);
+
+	/* Use PSA ChaCha20-Poly1305 with derived subkey */
+	wg_psa_aead_encrypt(dst, src, src_len, ad, ad_len, new_nonce, subkey);
+
+	crypto_zero(subkey, sizeof(subkey));
+
+	return 0;
+}
+
+bool wg_psa_xaead_decrypt(uint8_t *dst,
+			  const uint8_t *src, size_t src_len,
+			  const uint8_t *ad, size_t ad_len,
+			  const uint8_t *nonce,
+			  const uint8_t *key)
+{
+	uint8_t subkey[CHACHA20_KEY_SIZE];
+	uint64_t new_nonce;
+	bool result;
+
+	/* Use HChaCha20 to derive subkey from first 16 bytes of nonce */
+	hchacha20(subkey, nonce, key);
+
+	/* Extract last 8 bytes of 24-byte nonce as little-endian uint64 */
+	new_nonce = U8TO64_LITTLE(nonce + 16);
+
+	/* Use PSA ChaCha20-Poly1305 with derived subkey */
+	result = wg_psa_aead_decrypt(dst, src, src_len, ad, ad_len, new_nonce, subkey);
+
+	crypto_zero(subkey, sizeof(subkey));
+
+	return result;
 }
 
 int wg_psa_random(uint8_t *buf, size_t len)
