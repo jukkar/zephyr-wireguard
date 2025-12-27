@@ -47,11 +47,10 @@
  * Note: XChaCha20-Poly1305 (24-byte nonce) is not available in PSA Crypto API,
  * so we always use the reference implementation.
  */
-#include "refc/chacha20poly1305.h"
 #define wireguard_xaead_encrypt(dst, src, srclen, ad, adlen, nonce, key) \
-	xchacha20poly1305_encrypt(dst, src, srclen, ad, adlen, nonce, key)
+	wg_psa_xaead_encrypt(dst, src, srclen, ad, adlen, nonce, key)
 #define wireguard_xaead_decrypt(dst, src, srclen, ad, adlen, nonce, key) \
-	xchacha20poly1305_decrypt(dst, src, srclen, ad, adlen, nonce, key)
+	wg_psa_xaead_decrypt(dst, src, srclen, ad, adlen, nonce, key)
 
 #else /* ! CONFIG_WIREGUARD_USE_PSA */
 

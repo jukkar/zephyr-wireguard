@@ -79,6 +79,42 @@ bool wg_psa_aead_decrypt(uint8_t *dst,
 			 const uint8_t *key);
 
 /**
+ * @brief XChaCha20-Poly1305 AEAD encryption
+ *
+ * @param dst Output buffer (must be src_len + 16 bytes)
+ * @param src Plaintext input
+ * @param src_len Length of plaintext
+ * @param ad Additional authenticated data
+ * @param ad_len Length of additional data
+ * @param nonce 64-bit nonce (will be prefixed with 4 zero bytes)
+ * @param key 32-byte encryption key
+ * @return 0 on success, negative errno on failure
+ */
+int wg_psa_xaead_encrypt(uint8_t *dst,
+			 const uint8_t *src, size_t src_len,
+			 const uint8_t *ad, size_t ad_len,
+			 const uint8_t *nonce,
+			 const uint8_t *key);
+
+/**
+ * @brief XChaCha20-Poly1305 AEAD decryption
+ *
+ * @param dst Output buffer for plaintext (src_len - 16 bytes)
+ * @param src Ciphertext input (includes 16-byte tag)
+ * @param src_len Length of ciphertext (including tag)
+ * @param ad Additional authenticated data
+ * @param ad_len Length of additional data
+ * @param nonce 64-bit nonce
+ * @param key 32-byte decryption key
+ * @return true on success, false on failure (auth failed)
+ */
+bool wg_psa_xaead_decrypt(uint8_t *dst,
+			  const uint8_t *src, size_t src_len,
+			  const uint8_t *ad, size_t ad_len,
+			  const uint8_t *nonce,
+			  const uint8_t *key);
+
+/**
  * @brief Generate cryptographically secure random bytes
  *
  * @param buf Output buffer

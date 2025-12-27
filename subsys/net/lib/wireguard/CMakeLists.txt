@@ -22,13 +22,13 @@ zephyr_library_sources(
 # not available in PSA (Blake and XChaCha20-Poly1305)
 zephyr_library_sources(
   crypto/refc/chacha20.c
-  crypto/refc/poly1305-donna.c
   crypto/refc/blake2s.c
-  crypto/refc/chacha20poly1305.c
 )
 
 zephyr_library_sources_ifndef(CONFIG_WIREGUARD_USE_PSA
   crypto/refc/x25519.c
+  crypto/refc/poly1305-donna.c
+  crypto/refc/chacha20poly1305.c
 )
 
 zephyr_library_sources_ifdef(CONFIG_BOARD_NATIVE_SIM ns_rtc.c)
