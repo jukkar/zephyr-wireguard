@@ -289,13 +289,7 @@ static bool wg_generate_public_key(uint8_t *public_key, const uint8_t *private_k
 	bool ret = false;
 
 	if (memcmp(private_key, zero_key, WG_PUBLIC_KEY_LEN) != 0) {
-#ifdef CONFIG_WIREGUARD_USE_PSA
 		ret = (wg_psa_x25519_public_key(public_key, private_key) == 0);
-#else
-		static const uint8_t basepoint[WG_PUBLIC_KEY_LEN] = {9};
-
-		ret = (wireguard_x25519(public_key, private_key, basepoint) == 0);
-#endif
 	}
 
 	return ret;

@@ -11,8 +11,6 @@
 #include <stddef.h>
 #include <stdbool.h>
 
-#ifdef CONFIG_WIREGUARD_USE_PSA
-
 /**
  * @brief Initialize PSA crypto subsystem
  *
@@ -122,7 +120,5 @@ bool wg_psa_xaead_decrypt(uint8_t *dst,
  * @return 0 on success, negative errno on failure
  */
 int wg_psa_random(uint8_t *buf, size_t len);
-
-#endif /* CONFIG_WIREGUARD_USE_PSA */
 
 #endif /* WG_PSA_H_ */

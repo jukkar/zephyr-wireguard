@@ -40,8 +40,6 @@
 
 /* SPDX-License-Identifier: BSD-3-Clause */
 
-#include "chacha20.h"
-
 #include <string.h>
 #include <stdint.h>
 #include "../crypto.h"
@@ -54,9 +52,6 @@ static const uint32_t CHACHA20_CONSTANT_3 = 0x79622d32;
 static const uint32_t CHACHA20_CONSTANT_4 = 0x6b206574;
 
 #define ROTL32(v, n) (U32V((v) << (n)) | ((v) >> (32 - (n))))
-
-#define PLUS(v, w) (U32V((v) + (w)))
-#define PLUSONE(v) (PLUS((v), 1))
 
 /*  2.1. The ChaCha Quarter Round */
 /*  1.  a += b; d ^= a; d <<<= 16; */
@@ -93,92 +88,6 @@ static inline void INNER_BLOCK(uint32_t *block)
 #define TWENTY_ROUNDS(x)                                                                           \
 	(INNER_BLOCK(x), INNER_BLOCK(x), INNER_BLOCK(x), INNER_BLOCK(x), INNER_BLOCK(x),           \
 	 INNER_BLOCK(x), INNER_BLOCK(x), INNER_BLOCK(x), INNER_BLOCK(x), INNER_BLOCK(x))
-
-/*  2.3.  The ChaCha20 Block Function
- *  chacha20_block(key, counter, nonce):
- *   state = constants | key | counter | nonce
- *   working_state = state
- *      for i=1 up to 10
- *    inner_block(working_state)
- *   end
- *      state += working_state
- *      return serialize(state)
- *  end
- */
-static void chacha20_block(struct chacha20_ctx *ctx, uint8_t *stream)
-{
-	uint32_t working_state[16];
-	int i;
-
-	for (i = 0; i < 16; ++i) {
-		working_state[i] = ctx->state[i];
-	}
-
-	TWENTY_ROUNDS(working_state);
-
-	for (i = 0; i < 16; ++i) {
-		U32TO8_LITTLE(stream + (4 * i), PLUS(working_state[i], ctx->state[i]));
-	}
-}
-
-void chacha20(struct chacha20_ctx *ctx, uint8_t *out, const uint8_t *in, uint32_t len)
-{
-	uint8_t output[CHACHA20_BLOCK_SIZE];
-	int i;
-
-	if (len) {
-		for (;;) {
-			chacha20_block(ctx, output);
-			/*  Word 12 is a block counter */
-			ctx->state[12] = PLUSONE(ctx->state[12]);
-			if (len <= 64) {
-				for (i = 0; i < len; ++i) {
-					out[i] = in[i] ^ output[i];
-				}
-				return;
-			}
-			for (i = 0; i < 64; ++i) {
-				out[i] = in[i] ^ output[i];
-			}
-			len -= 64;
-			out += 64;
-			in += 64;
-		}
-	}
-}
-
-/*  2.3.  The ChaCha20 Block Function */
-/*  The first four words (0-3) are constants: 0x61707865, 0x3320646e, 0x79622d32, 0x6b206574 */
-/*  The next eight words (4-11) are taken from the 256-bit key by reading the bytes in little-endian
- * order, in 4-byte chunks.
- */
-/*  Word 12 is a block counter.  Since each block is 64-byte, a 32-bit word is enough for 256
- * gigabytes of data.
- */
-/*  Words 13-15 are a nonce, which should not be repeated for the same key. */
-/*  For wireguard: "nonce being composed of 32 bits of zeros followed by the 64-bit little-endian
- * value of counter." where counter comes from the Wireguard layer and is separate from the block
- * counter in word 12
- */
-void chacha20_init(struct chacha20_ctx *ctx, const uint8_t *key, const uint64_t nonce)
-{
-	ctx->state[0] = CHACHA20_CONSTANT_1;
-	ctx->state[1] = CHACHA20_CONSTANT_2;
-	ctx->state[2] = CHACHA20_CONSTANT_3;
-	ctx->state[3] = CHACHA20_CONSTANT_4;
-	ctx->state[4] = U8TO32_LITTLE(key + 0);
-	ctx->state[5] = U8TO32_LITTLE(key + 4);
-	ctx->state[6] = U8TO32_LITTLE(key + 8);
-	ctx->state[7] = U8TO32_LITTLE(key + 12);
-	ctx->state[8] = U8TO32_LITTLE(key + 16);
-	ctx->state[9] = U8TO32_LITTLE(key + 20);
-	ctx->state[10] = U8TO32_LITTLE(key + 24);
-	ctx->state[11] = U8TO32_LITTLE(key + 28);
-	ctx->state[12] = 0;
-	ctx->state[13] = 0;
-	ctx->state[14] = nonce & 0xFFFFFFFF;
-	ctx->state[15] = nonce >> 32;
-}
 
 /*  2.2. HChaCha20 */
 /*  HChaCha20 is initialized the same way as the ChaCha cipher, except that HChaCha20 uses a 128-bit

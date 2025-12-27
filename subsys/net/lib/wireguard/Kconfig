@@ -27,7 +27,7 @@ if WIREGUARD
 # SPDX-License-Identifier: Apache-2.0
 
 config WIREGUARD_USE_PSA
-	bool "Use PSA Crypto API for WireGuard cryptographic operations"
+	bool
 	imply PSA_WANT_ALG_CHACHA20_POLY1305
 	imply PSA_WANT_ALG_ECDH
 	imply PSA_WANT_ECC_MONTGOMERY_255
