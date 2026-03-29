@@ -1,3 +1,7 @@
+## General
+
+No further development is done in this repo as the codebase was merged into Zephyr 4.4.
+
 ## Building and Running
 
 Building the zephyr-wireguard requires a proper Zephyr development environment. Follow the
